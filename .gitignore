@@ -39,3 +39,33 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# IDEs and editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local database files
+*.db
+*.sqlite
+
+# Local builds and artifacts
+*.apk
+*.aab
+*.zip
+*.tar.gz
+*.tmp
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Log files
+*.log
+
+# OS metadata
+Thumbs.db
