@@ -28,6 +28,9 @@ jobs:
       - name: Expo Prebuild
         run: npx expo prebuild --platform android
 
+      - name: Patch build.gradle for standalone debug bundling
+        run: node scripts/patch-build-gradle.js
+
       - name: Build APK
         run: cd android && ./gradlew assembleDebug -Preact.bundleInDebug=true
 
