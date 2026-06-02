@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { Transaction } from '../database/types';
 import CategoryIcon from './CategoryIcon';
 import { Feather } from '@expo/vector-icons';
+import { getContrastColor, getTranslucentColor } from '../utils/color';
 
 export default function TransactionList() {
   const { transactions, categories, deleteTx, currencySymbol, theme } = useApp();
@@ -77,7 +78,7 @@ export default function TransactionList() {
         <View style={styles.txLeft}>
           {/* Category Icon */}
           <View style={[styles.iconWrapper, { backgroundColor: item.category_color || '#6B7280' }]}>
-            <CategoryIcon name={item.category_icon || 'grid'} size={16} color="#FFFFFF" />
+            <CategoryIcon name={item.category_icon || 'grid'} size={16} color={getContrastColor(item.category_color || '#6B7280')} />
           </View>
           
           <View style={styles.txInfo}>
@@ -192,23 +193,41 @@ export default function TransactionList() {
           keyExtractor={(item) => (item.id === null ? 'all-cat' : item.id.toString())}
           renderItem={({ item }) => {
             const isSelected = selectedCategoryId === item.id;
+            const hasColor = !!item.color;
+            const activeBg = hasColor 
+              ? getTranslucentColor(item.color, isDark ? 0.25 : 0.12) 
+              : (isDark ? 'rgba(255, 255, 255, 0.1)' : '#E2E8F0');
+            const activeBorder = hasColor 
+              ? item.color 
+              : (isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)');
+
             return (
               <Pressable
                 onPress={() => setSelectedCategoryId(item.id)}
                 style={[
                   styles.catChip,
                   isDark ? styles.chipDark : styles.chipLight,
-                  isSelected && (isDark ? styles.chipActiveDark : styles.chipActiveLight)
+                  isSelected && {
+                    backgroundColor: activeBg,
+                    borderColor: activeBorder,
+                    borderWidth: 1.5,
+                  }
                 ]}
               >
                 {item.icon && (
                   <View style={styles.catChipIcon}>
-                    <CategoryIcon name={item.icon} size={10} color={isSelected ? '#FFFFFF' : (isDark ? '#94A3B8' : '#64748B')} />
+                    <CategoryIcon 
+                      name={item.icon} 
+                      size={10} 
+                      color={isSelected ? (hasColor ? item.color : (isDark ? '#FFFFFF' : '#0F172A')) : (isDark ? '#94A3B8' : '#64748B')} 
+                    />
                   </View>
                 )}
                 <Text style={[
                   styles.catChipText,
-                  isSelected ? (isDark ? styles.textWhite : styles.textBlack) : (isDark ? styles.textMutedDark : styles.textMutedLight)
+                  isSelected 
+                    ? { fontWeight: '700', color: isDark ? '#FFFFFF' : '#0F172A' }
+                    : (isDark ? styles.textMutedDark : styles.textMutedLight)
                 ]}>
                   {item.name}
                 </Text>

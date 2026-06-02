@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TextInput, Pressable, ScrollView, Modal, Keyboa
 import { useApp } from '../context/AppContext';
 import CategoryIcon from './CategoryIcon';
 import { Feather } from '@expo/vector-icons';
+import { getContrastColor, getTranslucentColor } from '../utils/color';
 
 interface AddTransactionModalProps {
   visible: boolean;
@@ -150,25 +151,26 @@ export default function AddTransactionModal({ visible, onClose }: AddTransaction
               <View style={styles.categoryGrid}>
                 {categories.map((cat) => {
                   const isSelected = selectedCategoryId === cat.id;
+                  const activeBg = getTranslucentColor(cat.color, isDark ? 0.25 : 0.12);
                   return (
                     <Pressable
                       key={cat.id}
                       onPress={() => setSelectedCategoryId(cat.id)}
                       style={[
                         styles.catBubble,
-                        isSelected && { borderColor: cat.color, backgroundColor: `${cat.color}15` },
-                        isDark ? styles.catBubbleDark : styles.catBubbleLight
+                        isDark ? styles.catBubbleDark : styles.catBubbleLight,
+                        isSelected && { borderColor: cat.color, borderWidth: 2, backgroundColor: activeBg }
                       ]}
                     >
                       <View style={[styles.catIconCircle, { backgroundColor: cat.color }]}>
-                        <CategoryIcon name={cat.icon} size={14} color="#FFFFFF" />
+                        <CategoryIcon name={cat.icon} size={14} color={getContrastColor(cat.color)} />
                       </View>
                       <Text
                         numberOfLines={1}
                         style={[
                           styles.catNameText,
                           isDark ? styles.textWhite : styles.textBlack,
-                          isSelected && { fontWeight: '700' }
+                          isSelected && { fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }
                         ]}
                       >
                         {cat.name}

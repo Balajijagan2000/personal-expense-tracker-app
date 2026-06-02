@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TextInput, ScrollView, Pressable, Alert, Platfo
 import { useApp } from '../context/AppContext';
 import CategoryIcon from './CategoryIcon';
 import { Feather } from '@expo/vector-icons';
+import { getContrastColor, getTranslucentColor } from '../utils/color';
 
 export default function CategoryManager() {
   const { categories, budgets, addNewCategory, deleteCat, updateBudget, removeBudget, theme, currencySymbol } = useApp();
@@ -140,17 +141,26 @@ export default function CategoryManager() {
           <View style={styles.pickerGrid}>
             {iconOptions.map((icon) => {
               const isSelected = selectedIcon === icon;
+              const activeBg = getTranslucentColor(selectedColor, isDark ? 0.25 : 0.15);
               return (
                 <Pressable
                   key={icon}
                   onPress={() => setSelectedIcon(icon)}
                   style={[
                     styles.pickerItem,
-                    isSelected && { backgroundColor: selectedColor },
-                    isDark ? styles.pickerDark : styles.pickerLight
+                    isDark ? styles.pickerDark : styles.pickerLight,
+                    isSelected && {
+                      backgroundColor: activeBg,
+                      borderColor: selectedColor,
+                      borderWidth: 2,
+                    }
                   ]}
                 >
-                  <CategoryIcon name={icon} size={16} color={isSelected ? '#FFFFFF' : (isDark ? '#94A3B8' : '#64748B')} />
+                  <CategoryIcon
+                    name={icon}
+                    size={16}
+                    color={isSelected ? selectedColor : (isDark ? '#94A3B8' : '#64748B')}
+                  />
                 </Pressable>
               );
             })}
@@ -170,9 +180,14 @@ export default function CategoryManager() {
                   style={[
                     styles.colorCircle,
                     { backgroundColor: color },
-                    isSelected && styles.colorCircleSelected
+                    isSelected && styles.colorCircleSelected,
+                    isSelected && { borderColor: isDark ? '#FFFFFF' : '#0F172A' }
                   ]}
-                />
+                >
+                  {isSelected && (
+                    <Feather name="check" size={14} color={getContrastColor(color)} />
+                  )}
+                </Pressable>
               );
             })}
           </View>
@@ -213,7 +228,7 @@ export default function CategoryManager() {
                 <View style={styles.itemRow}>
                   <View style={styles.itemLeft}>
                     <View style={[styles.iconBox, { backgroundColor: cat.color }]}>
-                      <CategoryIcon name={cat.icon} size={14} color="#FFFFFF" />
+                      <CategoryIcon name={cat.icon} size={14} color={getContrastColor(cat.color)} />
                     </View>
                     <View>
                       <Text style={[styles.catName, isDark ? styles.textWhite : styles.textBlack]}>
@@ -400,10 +415,11 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   colorCircleSelected: {
     borderWidth: 2,
-    borderColor: '#FFFFFF',
     transform: [{ scale: 1.15 }],
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
