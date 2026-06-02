@@ -7,7 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { getContrastColor, getTranslucentColor } from '../utils/color';
 
 export default function TransactionList() {
-  const { transactions, categories, deleteTx, currencySymbol, theme } = useApp();
+  const { transactions, categories, deleteTx, currencySymbol, theme, selectedMonth } = useApp();
   const isDark = theme === 'dark';
 
   const [search, setSearch] = useState('');
@@ -40,6 +40,8 @@ export default function TransactionList() {
   // Filtered transactions computed locally for real-time performance
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
+      const matchesMonth = selectedMonth === 'all' || (t.date && t.date.startsWith(selectedMonth));
+
       const matchesSearch = 
         t.category_name?.toLowerCase().includes(search.toLowerCase()) ||
         t.description?.toLowerCase().includes(search.toLowerCase());
@@ -48,9 +50,9 @@ export default function TransactionList() {
 
       const matchesCategory = selectedCategoryId === null || t.category_id === selectedCategoryId;
 
-      return matchesSearch && matchesType && matchesCategory;
+      return matchesMonth && matchesSearch && matchesType && matchesCategory;
     });
-  }, [transactions, search, selectedType, selectedCategoryId]);
+  }, [transactions, selectedMonth, search, selectedType, selectedCategoryId]);
 
   const handleDelete = (id: number) => {
     if (Platform.OS === 'web') {

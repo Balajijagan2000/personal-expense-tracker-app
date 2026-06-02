@@ -13,6 +13,8 @@ interface AppContextProps {
   currencySymbol: string;
   currencyCode: string;
   isLoading: boolean;
+  selectedMonth: string;
+  setSelectedMonth: (month: string) => void;
   
   // Transactions
   addNewTransaction: (type: 'expense' | 'income', amount: number, categoryId: number, date: string, description?: string) => Transaction | null;
@@ -35,6 +37,13 @@ interface AppContextProps {
 
 const AppContext = createContext<AppContextProps | undefined>(undefined);
 
+const getCurrentMonthStr = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+};
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -44,6 +53,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [currencyCode, setCurrencyCode] = useState('USD');
   const [currencySymbol, setCurrencySymbol] = useState('$');
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthStr());
 
   // Initialize DB on mount
   useEffect(() => {
@@ -68,12 +78,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const loadDataFromSource = () => {
+  const loadDataFromSource = (month: string = selectedMonth) => {
     try {
       const cats = getAllCategories();
       const txs = getAllTransactions();
       const budg = getAllBudgets();
-      const summary = getTransactionStats();
+      
+      let summary;
+      if (month === 'all') {
+        summary = getTransactionStats();
+      } else {
+        const [year, m] = month.split('-').map(Number);
+        const lastDay = new Date(year, m, 0).getDate();
+        const startDate = `${month}-01`;
+        const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
+        summary = getTransactionStats(startDate, endDate);
+      }
 
       setCategories(cats);
       setTransactions(txs);
@@ -83,6 +103,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.error('Failed to load data:', error);
     }
   };
+
+  // Reload data/stats whenever the selected month changes
+  useEffect(() => {
+    if (!isLoading) {
+      loadDataFromSource(selectedMonth);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMonth]);
 
   const refreshData = () => {
     loadDataFromSource();
@@ -97,7 +125,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   ) => {
     const tx = addTransaction(type, amount, categoryId, date, description);
     if (tx) {
-      loadDataFromSource();
+      loadDataFromSource(selectedMonth);
     }
     return tx;
   };
@@ -105,7 +133,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const deleteTx = (id: number) => {
     const success = deleteTransaction(id);
     if (success) {
-      loadDataFromSource();
+      loadDataFromSource(selectedMonth);
     }
     return success;
   };
@@ -113,7 +141,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addNewCategory = (name: string, icon: string, color: string) => {
     const cat = addCategory(name, icon, color);
     if (cat) {
-      loadDataFromSource();
+      loadDataFromSource(selectedMonth);
     }
     return cat;
   };
@@ -121,7 +149,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const deleteCat = (id: number) => {
     const success = deleteCategory(id);
     if (success) {
-      loadDataFromSource();
+      loadDataFromSource(selectedMonth);
     }
     return success;
   };
@@ -129,7 +157,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateBudget = (categoryId: number, limitAmount: number) => {
     const b = setBudget(categoryId, limitAmount);
     if (b) {
-      loadDataFromSource();
+      loadDataFromSource(selectedMonth);
     }
     return b;
   };
@@ -137,7 +165,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const removeBudget = (categoryId: number) => {
     const success = deleteBudget(categoryId);
     if (success) {
-      loadDataFromSource();
+      loadDataFromSource(selectedMonth);
     }
     return success;
   };
@@ -161,8 +189,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (isWeb) {
         localStorage.clear();
       }
+      setSelectedMonth(getCurrentMonthStr());
       initDatabase(); // Re-seeds categories and tables
-      loadDataFromSource();
+      loadDataFromSource(getCurrentMonthStr());
     } catch (error) {
       console.error('Reset error:', error);
     }
@@ -179,6 +208,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         currencySymbol,
         currencyCode,
         isLoading,
+        selectedMonth,
+        setSelectedMonth,
         addNewTransaction,
         deleteTx,
         addNewCategory,

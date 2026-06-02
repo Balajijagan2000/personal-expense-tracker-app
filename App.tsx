@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { StyleSheet, View, Text, SafeAreaView, Pressable, Platform, StatusBar, Alert, Image, FlatList } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { AppProvider, useApp } from './src/context/AppContext';
@@ -13,12 +13,63 @@ import { Feather } from '@expo/vector-icons';
 type TabType = 'dashboard' | 'analytics' | 'categories' | 'settings';
 
 function MainAppContent() {
-  const { theme, toggleTheme, currencyCode, updateCurrency, resetAll, refreshData, transactions } = useApp();
+  const { theme, toggleTheme, currencyCode, updateCurrency, resetAll, refreshData, transactions, selectedMonth, setSelectedMonth } = useApp();
   const isDark = theme === 'dark';
 
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [selectedExportMonth, setSelectedExportMonth] = useState<string>('all');
+
+  const getCurrentMonthStr = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  };
+
+  const [displayedMonth, setDisplayedMonth] = useState<string>(
+    selectedMonth === 'all' ? getCurrentMonthStr() : selectedMonth
+  );
+
+  useEffect(() => {
+    if (selectedMonth !== 'all') {
+      setDisplayedMonth(selectedMonth);
+    }
+  }, [selectedMonth]);
+
+  const getNextMonthStr = (monthStr: string): string => {
+    const [year, month] = monthStr.split('-').map(Number);
+    const date = new Date(year, month, 1);
+    const nextYear = date.getFullYear();
+    const nextMonth = String(date.getMonth() + 1).padStart(2, '0');
+    return `${nextYear}-${nextMonth}`;
+  };
+
+  const getPrevMonthStr = (monthStr: string): string => {
+    const [year, month] = monthStr.split('-').map(Number);
+    const date = new Date(year, month - 2, 1);
+    const prevYear = date.getFullYear();
+    const prevMonth = String(date.getMonth() + 1).padStart(2, '0');
+    return `${prevYear}-${prevMonth}`;
+  };
+
+  const handlePreviousMonth = () => {
+    const prev = getPrevMonthStr(displayedMonth);
+    setDisplayedMonth(prev);
+    setSelectedMonth(prev);
+  };
+
+  const handleNextMonth = () => {
+    const next = getNextMonthStr(displayedMonth);
+    setDisplayedMonth(next);
+    setSelectedMonth(next);
+  };
+
+  const formatMonthLabelLong = (monthStr: string) => {
+    const [year, month] = monthStr.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
 
   // Compute available months dynamically from transactions
   const availableMonths = useMemo(() => {
@@ -138,6 +189,70 @@ function MainAppContent() {
           <Feather name={isDark ? 'sun' : 'moon'} size={18} color={isDark ? '#F59E0B' : '#475569'} />
         </Pressable>
       </View>
+
+      {/* Month Selector Row (for Dashboard only) */}
+      {activeTab === 'dashboard' && (
+        <View style={styles.monthFilterRow}>
+          <Pressable
+            onPress={() => setSelectedMonth('all')}
+            style={[
+              styles.allTimeBtn,
+              isDark ? styles.allTimeBtnDark : styles.allTimeBtnLight,
+              selectedMonth === 'all' && styles.allTimeBtnActive
+            ]}
+          >
+            <Text style={[
+              styles.allTimeBtnText,
+              selectedMonth === 'all' ? styles.textWhite : (isDark ? styles.textMutedDark : styles.textMutedLight)
+            ]}>
+              All Time
+            </Text>
+          </Pressable>
+
+          <View style={[
+            styles.monthSlider,
+            isDark ? styles.sliderDark : styles.sliderLight,
+            selectedMonth !== 'all' && styles.monthSliderActive
+          ]}>
+            <Pressable
+              onPress={handlePreviousMonth}
+              style={({ pressed }) => [
+                styles.sliderChevron,
+                pressed && styles.pressed
+              ]}
+            >
+              <Feather name="chevron-left" size={20} color={isDark ? '#F8FAFC' : '#0F172A'} />
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                if (selectedMonth === 'all') {
+                  setSelectedMonth(displayedMonth);
+                }
+              }}
+              style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Text style={[
+                styles.sliderMonthText,
+                isDark ? styles.textWhite : styles.textBlack,
+                selectedMonth === 'all' && { opacity: 0.6 }
+              ]}>
+                {formatMonthLabelLong(displayedMonth)}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={handleNextMonth}
+              style={({ pressed }) => [
+                styles.sliderChevron,
+                pressed && styles.pressed
+              ]}
+            >
+              <Feather name="chevron-right" size={20} color={isDark ? '#F8FAFC' : '#0F172A'} />
+            </Pressable>
+          </View>
+        </View>
+      )}
 
       {/* Screen Body */}
       <View style={styles.screenBody}>
@@ -655,5 +770,69 @@ const styles = StyleSheet.create({
   exportChipText: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  monthFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    gap: 10,
+  },
+  allTimeBtn: {
+    paddingHorizontal: 16,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  allTimeBtnLight: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
+  },
+  allTimeBtnDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  allTimeBtnActive: {
+    backgroundColor: '#8B5CF6',
+    borderColor: '#8B5CF6',
+  },
+  allTimeBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  monthSlider: {
+    width: 180,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 4,
+  },
+  sliderLight: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
+  },
+  sliderDark: {
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  monthSliderActive: {
+    borderColor: 'rgba(139, 92, 246, 0.4)',
+  },
+  sliderChevron: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sliderMonthText: {
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });

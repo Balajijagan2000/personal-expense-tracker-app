@@ -1,15 +1,34 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, Pressable, useWindowDimensions } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { StyleSheet, View, Text, ScrollView, Pressable, useWindowDimensions, Modal } from 'react-native';
 import Svg, { Circle, Rect, Text as SvgText, G } from 'react-native-svg';
 import { useApp } from '../context/AppContext';
+import { Feather } from '@expo/vector-icons';
 import { Transaction } from '../database/types';
 
 export default function AnalyticsCharts() {
-  const { stats, transactions, currencySymbol, theme } = useApp();
+  const { stats, transactions, currencySymbol, theme, selectedMonth, setSelectedMonth } = useApp();
   const isDark = theme === 'dark';
   const { width } = useWindowDimensions();
   
   const [selectedCategoryIndex, setSelectedCategoryIndex] = useState<number | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const dropdownMonths = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const list = [];
+    for (let m = 1; m <= 12; m++) {
+      const monthStr = String(m).padStart(2, '0');
+      list.push(`${currentYear}-${monthStr}`);
+    }
+    return list;
+  }, []);
+
+  const formatMonthLabelLong = (monthStr: string) => {
+    if (monthStr === 'all') return 'All Time';
+    const [year, month] = monthStr.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
 
   const formatAmount = (num: number) => {
     return `${currencySymbol}${num.toLocaleString(undefined, {
@@ -132,9 +151,94 @@ export default function AnalyticsCharts() {
 
       {/* Category Breakdown (Donut Chart) */}
       <View style={[styles.card, isDark ? styles.cardDark : styles.cardLight]}>
-        <Text style={[styles.cardTitle, isDark ? styles.textWhite : styles.textBlack]}>
-          Category Breakdown
-        </Text>
+        <View style={styles.cardHeaderRow}>
+          <Text style={[styles.cardTitle, isDark ? styles.textWhite : styles.textBlack, { marginBottom: 0 }]}>
+            Category Breakdown
+          </Text>
+          
+          <Pressable
+            onPress={() => setShowDropdown(true)}
+            style={[
+              styles.dropdownBtn,
+              isDark ? styles.dropdownBtnDark : styles.dropdownBtnLight
+            ]}
+          >
+            <Text style={[styles.dropdownBtnText, isDark ? styles.textWhite : styles.textBlack]}>
+              {selectedMonth === 'all' ? 'All Time' : formatMonthLabelLong(selectedMonth)}
+            </Text>
+            <Feather name="chevron-down" size={14} color={isDark ? '#94A3B8' : '#64748B'} style={{ marginLeft: 6 }} />
+          </Pressable>
+        </View>
+
+        {/* Month Selection Modal */}
+        <Modal
+          visible={showDropdown}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowDropdown(false)}
+        >
+          <Pressable 
+            style={styles.modalOverlay} 
+            onPress={() => setShowDropdown(false)}
+          >
+            <View style={[styles.dropdownModalContent, isDark ? styles.modalDark : styles.modalLight]}>
+              <Text style={[styles.modalTitle, isDark ? styles.textWhite : styles.textBlack]}>
+                Select Month
+              </Text>
+              <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
+                <Pressable
+                  onPress={() => {
+                    setSelectedMonth('all');
+                    setShowDropdown(false);
+                  }}
+                  style={[
+                    styles.dropdownOption,
+                    selectedMonth === 'all' && (isDark ? styles.optionActiveDark : styles.optionActiveLight)
+                  ]}
+                >
+                  <Text style={[
+                    styles.optionText,
+                    isDark ? styles.textWhite : styles.textBlack,
+                    selectedMonth === 'all' && styles.optionTextActive
+                  ]}>
+                    All Time
+                  </Text>
+                  {selectedMonth === 'all' && (
+                    <Feather name="check" size={16} color="#8B5CF6" />
+                  )}
+                </Pressable>
+                
+                {dropdownMonths.map((m) => {
+                  const isSelected = selectedMonth === m;
+                  return (
+                    <Pressable
+                      key={m}
+                      onPress={() => {
+                        setSelectedMonth(m);
+                        setShowDropdown(false);
+                      }}
+                      style={[
+                        styles.dropdownOption,
+                        isSelected && (isDark ? styles.optionActiveDark : styles.optionActiveLight)
+                      ]}
+                    >
+                      <Text style={[
+                        styles.optionText,
+                        isDark ? styles.textWhite : styles.textBlack,
+                        isSelected && styles.optionTextActive
+                      ]}>
+                        {formatMonthLabelLong(m)}
+                      </Text>
+                      {isSelected && (
+                        <Feather name="check" size={16} color="#8B5CF6" />
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </Pressable>
+        </Modal>
 
         {breakdown.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -351,5 +455,87 @@ const styles = StyleSheet.create({
   },
   textMutedLight: {
     color: '#64748B',
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  dropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    height: 32,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  dropdownBtnLight: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
+  },
+  dropdownBtnDark: {
+    backgroundColor: '#334155',
+    borderColor: '#475569',
+  },
+  dropdownBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  dropdownModalContent: {
+    width: '100%',
+    maxWidth: 320,
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalDark: {
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  modalLight: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 16,
+  },
+  dropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  optionActiveLight: {
+    backgroundColor: 'rgba(139, 92, 246, 0.08)',
+  },
+  optionActiveDark: {
+    backgroundColor: 'rgba(139, 92, 246, 0.16)',
+  },
+  optionText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  optionTextActive: {
+    color: '#8B5CF6',
+    fontWeight: '700',
   },
 });

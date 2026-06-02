@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, TextInput, Pressable, ScrollView, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { useApp } from '../context/AppContext';
 import CategoryIcon from './CategoryIcon';
 import { Feather } from '@expo/vector-icons';
 import { getContrastColor, getTranslucentColor } from '../utils/color';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface AddTransactionModalProps {
   visible: boolean;
@@ -20,10 +21,15 @@ export default function AddTransactionModal({ visible, onClose }: AddTransaction
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const dateInputRef = useRef<any>(null);
 
-  // Format date helper: YYYY-MM-DD
+  // Timezone-safe local date formatting: YYYY-MM-DD
   const getFormattedDate = (d: Date): string => {
-    return d.toISOString().split('T')[0];
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   // Set default values on modal open
@@ -50,7 +56,12 @@ export default function AddTransactionModal({ visible, onClose }: AddTransaction
 
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      setErrorMsg('Please enter a valid amount greater than 0.');
+      setErrorMsg('Please enter a valid transaction amount greater than 0.');
+      return;
+    }
+
+    if (parsedAmount > 100000000) {
+      setErrorMsg('Transaction amount cannot exceed 100,000,000.');
       return;
     }
 
@@ -59,10 +70,48 @@ export default function AddTransactionModal({ visible, onClose }: AddTransaction
       return;
     }
 
+    const trimmedDate = date.trim();
+    if (!trimmedDate) {
+      setErrorMsg('Date field cannot be empty.');
+      return;
+    }
+
+    // Validate date format (YYYY-MM-DD)
+    const dateReg = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateReg.test(trimmedDate)) {
+      setErrorMsg('Please enter a valid date in YYYY-MM-DD format.');
+      return;
+    }
+
+    // Validate that the date is actually valid on the calendar (e.g. no 13th month, no Feb 30th)
+    const parts = trimmedDate.split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
+    const parsedDate = new Date(year, month - 1, day);
+
+    const isCalendarValid = 
+      parsedDate.getFullYear() === year &&
+      parsedDate.getMonth() === month - 1 &&
+      parsedDate.getDate() === day;
+
+    if (!isCalendarValid) {
+      setErrorMsg('Please enter a valid calendar date (e.g. check the month or day).');
+      return;
+    }
+
+    // Restrict adding transactions with future dates
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    if (parsedDate.getTime() > endOfToday.getTime()) {
+      setErrorMsg('Transaction date cannot be in the future.');
+      return;
+    }
+
     // Standardize date to full ISO format: YYYY-MM-DD HH:MM:SS
     const now = new Date();
     const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-    const fullIsoDate = `${date} ${timeStr}`;
+    const fullIsoDate = `${trimmedDate} ${timeStr}`;
 
     const tx = addNewTransaction(type, parsedAmount, selectedCategoryId, fullIsoDate, description.trim());
     if (tx) {
@@ -211,16 +260,70 @@ export default function AddTransactionModal({ visible, onClose }: AddTransaction
                   <Text style={[styles.datePresetText, isDark ? styles.textWhite : styles.textBlack]}>Yesterday</Text>
                 </Pressable>
 
-                <View style={[styles.dateTextInputWrapper, isDark ? styles.inputDark : styles.inputLight]}>
-                  <TextInput
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={isDark ? '#475569' : '#94A3B8'}
-                    style={[styles.dateTextInput, isDark ? styles.textWhite : styles.textBlack]}
-                    value={date}
-                    onChangeText={setDate}
-                  />
-                </View>
+                {Platform.OS === 'web' ? (
+                  <View style={[styles.dateTextInputWrapper, isDark ? styles.inputDark : styles.inputLight]}>
+                    <TextInput
+                      ref={dateInputRef}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor={isDark ? '#475569' : '#94A3B8'}
+                      style={[styles.dateTextInput, isDark ? styles.textWhite : styles.textBlack]}
+                      value={date}
+                      onChangeText={setDate}
+                      {...({
+                        type: 'date',
+                        max: getFormattedDate(new Date()),
+                        onClick: () => {
+                          if (dateInputRef.current) {
+                            const node = dateInputRef.current.getHostNode 
+                              ? dateInputRef.current.getHostNode() 
+                              : dateInputRef.current;
+                            if (node && typeof node.showPicker === 'function') {
+                              try {
+                                node.showPicker();
+                              } catch (e) {
+                                console.warn('Native browser date picker popup failed to trigger:', e);
+                              }
+                            }
+                          }
+                        }
+                      } as any)} // For native HTML5 browser calendar dropdown on Web
+                    />
+                  </View>
+                ) : (
+                  <Pressable
+                    onPress={() => setShowDatePicker(true)}
+                    style={[
+                      styles.datePickerBtn,
+                      isDark ? styles.inputDark : styles.inputLight
+                    ]}
+                  >
+                    <Feather name="calendar" size={14} color={isDark ? '#94A3B8' : '#64748B'} style={styles.calendarIcon} />
+                    <Text style={[styles.datePickerBtnText, isDark ? styles.textWhite : styles.textBlack]}>
+                      {date || 'Select Date'}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
+
+              {/* Native Mobile Date Picker dialog */}
+              {Platform.OS !== 'web' && showDatePicker && (
+                <DateTimePicker
+                  value={(() => {
+                    const parsed = Date.parse(date);
+                    return isNaN(parsed) ? new Date() : new Date(parsed);
+                  })()}
+                  mode="date"
+                  display="default"
+                  maximumDate={new Date()}
+                  themeVariant={isDark ? 'dark' : 'light'}
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (selectedDate) {
+                      setDate(getFormattedDate(selectedDate));
+                    }
+                  }}
+                />
+              )}
             </View>
 
             {/* 5. Description Note */}
@@ -490,5 +593,21 @@ const styles = StyleSheet.create({
   },
   textMutedLight: {
     color: '#64748B',
+  },
+  datePickerBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 40,
+    borderWidth: 1,
+  },
+  calendarIcon: {
+    marginRight: 8,
+  },
+  datePickerBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

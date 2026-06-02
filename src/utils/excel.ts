@@ -251,28 +251,34 @@ export async function importFromExcel(): Promise<ImportResult> {
       }
 
       // Format input date into SQLite/ISO string if it's parsed as serial number (Excel dates sometimes parse as numbers)
-      let finalDate = dateStr;
+      let dateObj = new Date();
       if (!isNaN(Number(dateStr)) && Number(dateStr) > 30000) {
         // Excel date serial number
         try {
-          const parsedExcelDate = new Date((Number(dateStr) - 25569) * 86400 * 1000);
-          finalDate = formatLocalDate(parsedExcelDate);
+          dateObj = new Date((Number(dateStr) - 25569) * 86400 * 1000);
         } catch {
-          finalDate = formatLocalDate(new Date());
+          dateObj = new Date();
         }
       } else {
         // Parse date string
         try {
-          const dateObj = new Date(dateStr);
-          if (isNaN(dateObj.getTime())) {
-            finalDate = formatLocalDate(new Date());
-          } else {
-            finalDate = formatLocalDate(dateObj);
+          const parsedObj = new Date(dateStr);
+          if (!isNaN(parsedObj.getTime())) {
+            dateObj = parsedObj;
           }
         } catch {
-          finalDate = formatLocalDate(new Date());
+          dateObj = new Date();
         }
       }
+
+      // Restrict future dates: clamp to today if it's in the future
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+      if (dateObj.getTime() > endOfToday.getTime()) {
+        dateObj = new Date();
+      }
+
+      const finalDate = formatLocalDate(dateObj);
 
       const tx = addTransaction(type, amount, categoryId, finalDate, description);
       if (tx) {
