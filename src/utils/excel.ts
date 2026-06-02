@@ -75,7 +75,7 @@ export async function exportToExcel(monthFilter?: string): Promise<boolean> {
 
     // 3. Create a beautiful array-of-arrays for the Summary sheet
     const summaryRows = [
-      ['Expense Tracker - Financial Summary Report'],
+      ['MoneyFlow - Financial Summary Report'],
       ['Generated On', new Date().toLocaleString()],
       monthFilter ? [`Export Filter Month: ${monthFilter}`] : ['Export Filter: All-Time'],
       [],

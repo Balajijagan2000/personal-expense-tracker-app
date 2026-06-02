@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { StyleSheet, View, Text, SafeAreaView, Pressable, Platform, StatusBar, Alert, Image, FlatList } from 'react-native';
+import { StyleSheet, View, Text, SafeAreaView, Pressable, Platform, StatusBar, Alert, Image, FlatList, ActivityIndicator } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { AppProvider, useApp } from './src/context/AppContext';
 import BalanceCard from './src/components/BalanceCard';
@@ -13,8 +13,16 @@ import { Feather } from '@expo/vector-icons';
 type TabType = 'dashboard' | 'analytics' | 'categories' | 'settings';
 
 function MainAppContent() {
-  const { theme, toggleTheme, currencyCode, updateCurrency, resetAll, refreshData, transactions, selectedMonth, setSelectedMonth } = useApp();
+  const { theme, toggleTheme, currencyCode, updateCurrency, resetAll, refreshData, transactions, selectedMonth, setSelectedMonth, isLoading } = useApp();
   const isDark = theme === 'dark';
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.loadingRoot, isDark ? styles.rootDark : styles.rootLight]}>
+        <ActivityIndicator size="large" color="#8B5CF6" />
+      </SafeAreaView>
+    );
+  }
 
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
@@ -176,8 +184,8 @@ function MainAppContent() {
             style={{ width: 34, height: 34, borderRadius: 8 }}
           />
           <View>
-            <Text style={[styles.appName, isDark ? styles.textWhite : styles.textBlack]}>Expense Tracker</Text>
-            <Text style={[styles.appSubtitle, isDark ? styles.textMutedDark : styles.textMutedLight]}>Offline Financial Vault</Text>
+            <Text style={[styles.appName, isDark ? styles.textWhite : styles.textBlack]}>MoneyFlow</Text>
+            <Text style={[styles.appSubtitle, isDark ? styles.textMutedDark : styles.textMutedLight]}>Offline Money Manager</Text>
           </View>
         </View>
 
@@ -834,5 +842,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  loadingRoot: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

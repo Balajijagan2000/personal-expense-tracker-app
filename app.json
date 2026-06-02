@@ -1,19 +1,19 @@
 {
   "expo": {
-    "name": "expense-tracker",
-    "slug": "expense-tracker",
-    "version": "2.0.0",
+    "name": "MoneyFlow",
+    "slug": "moneyflow",
+    "version": "2.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.myapps.expensetracker",
-      "buildNumber": "1"
+      "bundleIdentifier": "com.myapps.moneyflow",
+      "buildNumber": "2"
     },
     "android": {
-      "package": "com.myapps.expensetracker",
-      "versionCode": 1,
+      "package": "com.myapps.moneyflow",
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#0F172A",
         "foregroundImage": "./assets/android-icon-foreground.png"
