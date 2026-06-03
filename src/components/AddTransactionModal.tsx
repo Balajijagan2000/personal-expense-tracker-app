@@ -129,7 +129,7 @@ export default function AddTransactionModal({ visible, onClose }: AddTransaction
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalBg}
       >
         <View style={[styles.modalSheet, isDark ? styles.sheetDark : styles.sheetLight]}>
@@ -149,7 +149,11 @@ export default function AddTransactionModal({ visible, onClose }: AddTransaction
             </View>
           ) : null}
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.sheetScroll}>
+          <ScrollView 
+            showsVerticalScrollIndicator={false} 
+            contentContainerStyle={styles.sheetScroll}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* 1. Type Switcher */}
             <View style={styles.typeSelectorContainer}>
               <Pressable

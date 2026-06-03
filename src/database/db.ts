@@ -15,6 +15,8 @@ export const DEFAULT_CATEGORIES: Omit<Category, 'id'>[] = [
   { name: 'Utilities', icon: 'zap', color: '#06B6D4', is_default: 1 },
   { name: 'Housing', icon: 'home', color: '#EF4444', is_default: 1 },
   { name: 'Salary', icon: 'dollar-sign', color: '#10B981', is_default: 1 },
+  { name: 'Snacks', icon: 'smile', color: '#F97316', is_default: 1 },
+  { name: 'Savings', icon: 'trending-up', color: '#14B8A6', is_default: 1 },
   { name: 'Others', icon: 'grid', color: '#6B7280', is_default: 1 },
 ];
 
@@ -43,9 +45,29 @@ export function initDatabase() {
         const data = localStorage.getItem('expense_tracker_categories');
         if (data) {
           const categories = JSON.parse(data);
+          let modified = false;
           const transport = categories.find((c: any) => c.name === 'Transport' && c.icon === 'car');
           if (transport) {
             transport.icon = 'truck';
+            modified = true;
+          }
+
+          // Migration: Seed Snacks and Savings if missing
+          const snacks = categories.find((c: any) => c.name.toLowerCase() === 'snacks');
+          if (!snacks) {
+            const nextId = categories.length > 0 ? Math.max(...categories.map((c: any) => c.id)) + 1 : 1;
+            categories.push({ id: nextId, name: 'Snacks', icon: 'smile', color: '#F97316', is_default: 1 });
+            modified = true;
+          }
+
+          const savings = categories.find((c: any) => c.name.toLowerCase() === 'savings');
+          if (!savings) {
+            const nextId = categories.length > 0 ? Math.max(...categories.map((c: any) => c.id)) + 1 : 1;
+            categories.push({ id: nextId, name: 'Savings', icon: 'trending-up', color: '#14B8A6', is_default: 1 });
+            modified = true;
+          }
+
+          if (modified) {
             localStorage.setItem('expense_tracker_categories', JSON.stringify(categories));
           }
         }
@@ -127,6 +149,26 @@ export function initDatabase() {
           );
         } catch (e) {
           console.error('Failed to run categories migration in SQLite:', e);
+        }
+
+        // Migration: Seed Snacks and Savings if missing
+        try {
+          const snacksRow = db.getFirstSync<{ id: number }>('SELECT id FROM categories WHERE LOWER(name) = ?;', ['snacks']);
+          if (!snacksRow) {
+            db.runSync(
+              'INSERT INTO categories (name, icon, color, is_default) VALUES (?, ?, ?, 1);',
+              ['Snacks', 'smile', '#F97316']
+            );
+          }
+          const savingsRow = db.getFirstSync<{ id: number }>('SELECT id FROM categories WHERE LOWER(name) = ?;', ['savings']);
+          if (!savingsRow) {
+            db.runSync(
+              'INSERT INTO categories (name, icon, color, is_default) VALUES (?, ?, ?, 1);',
+              ['Savings', 'trending-up', '#14B8A6']
+            );
+          }
+        } catch (e) {
+          console.error('Failed to seed missing categories in SQLite:', e);
         }
       }
       console.log('Native SQLite database initialized successfully.');

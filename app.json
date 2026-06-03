@@ -2,18 +2,18 @@
   "expo": {
     "name": "MoneyFlow",
     "slug": "moneyflow",
-    "version": "2.2.0",
+    "version": "2.3.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.myapps.moneyflow",
-      "buildNumber": "2"
+      "buildNumber": "3"
     },
     "android": {
       "package": "com.myapps.moneyflow",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#0F172A",
         "foregroundImage": "./assets/android-icon-foreground.png"
@@ -21,7 +21,7 @@
       "predictiveBackGestureEnabled": false
     },
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#0F172A"
     },

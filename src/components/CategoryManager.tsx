@@ -24,7 +24,8 @@ export default function CategoryManager() {
   const iconOptions = [
     'coffee', 'truck', 'shopping-bag', 'film', 'zap', 'home', 
     'dollar-sign', 'grid', 'credit-card', 'gift', 'heart', 
-    'book', 'activity', 'smile', 'briefcase', 'tool'
+    'book', 'activity', 'smile', 'briefcase', 'tool',
+    'trending-up', 'tag', 'umbrella', 'award', 'globe'
   ];
 
   // Color Palette
@@ -40,6 +41,10 @@ export default function CategoryManager() {
     '#6366F1', // Indigo
     '#14B8A6', // Teal
     '#84CC16', // Lime
+    '#D946EF', // Fuchsia
+    '#0EA5E9', // Sky Blue
+    '#F43F5E', // Rose
+    '#EAB308', // Yellow
     '#6B7280', // Slate Gray
   ];
 
