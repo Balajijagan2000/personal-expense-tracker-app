@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Category, Transaction, Budget } from '../database/types';
 import { initDatabase, getSetting, setSetting, isWeb } from '../database/db';
-import { getAllCategories, addCategory, deleteCategory, getAllBudgets, setBudget, deleteBudget } from '../database/categoryRepository';
+import { getAllCategories, addCategory, deleteCategory, getAllBudgets, setBudget, deleteBudget, copyBudgets } from '../database/categoryRepository';
 import { getAllTransactions, addTransaction, deleteTransaction, getTransactionStats, StatsSummary } from '../database/transactionRepository';
 
 interface AppContextProps {
@@ -27,6 +27,7 @@ interface AppContextProps {
   // Budgets
   updateBudget: (categoryId: number, limitAmount: number) => Budget | null;
   removeBudget: (categoryId: number) => boolean;
+  copyBudgetsForMonth: (fromMonth: string, toMonth: string) => boolean;
   
   // Settings
   toggleTheme: () => void;
@@ -82,7 +83,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const cats = getAllCategories();
       const txs = getAllTransactions();
-      const budg = getAllBudgets();
+      const budgetMonth = month === 'all' ? getCurrentMonthStr() : month;
+      const budg = getAllBudgets(budgetMonth);
       
       let summary;
       if (month === 'all') {
@@ -155,7 +157,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const updateBudget = (categoryId: number, limitAmount: number) => {
-    const b = setBudget(categoryId, limitAmount);
+    const budgetMonth = selectedMonth === 'all' ? getCurrentMonthStr() : selectedMonth;
+    const b = setBudget(categoryId, limitAmount, budgetMonth);
     if (b) {
       loadDataFromSource(selectedMonth);
     }
@@ -163,7 +166,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const removeBudget = (categoryId: number) => {
-    const success = deleteBudget(categoryId);
+    const budgetMonth = selectedMonth === 'all' ? getCurrentMonthStr() : selectedMonth;
+    const success = deleteBudget(categoryId, budgetMonth);
+    if (success) {
+      loadDataFromSource(selectedMonth);
+    }
+    return success;
+  };
+
+  const copyBudgetsForMonth = (fromMonth: string, toMonth: string) => {
+    const success = copyBudgets(fromMonth, toMonth);
     if (success) {
       loadDataFromSource(selectedMonth);
     }
@@ -216,6 +228,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         deleteCat,
         updateBudget,
         removeBudget,
+        copyBudgetsForMonth,
         toggleTheme,
         updateCurrency,
         resetAll,

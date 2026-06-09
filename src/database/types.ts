@@ -20,6 +20,7 @@ export interface Transaction {
 
 export interface Budget {
   category_id: number;
+  month: string; // YYYY-MM
   limit_amount: number;
   category_name?: string; // Hydrated
   category_color?: string; // Hydrated

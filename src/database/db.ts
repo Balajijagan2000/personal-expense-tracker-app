@@ -17,6 +17,9 @@ export const DEFAULT_CATEGORIES: Omit<Category, 'id'>[] = [
   { name: 'Salary', icon: 'dollar-sign', color: '#10B981', is_default: 1 },
   { name: 'Snacks', icon: 'smile', color: '#F97316', is_default: 1 },
   { name: 'Savings', icon: 'trending-up', color: '#14B8A6', is_default: 1 },
+  { name: 'Petrol', icon: 'droplet', color: '#0284C7', is_default: 1 },
+  { name: 'EMI', icon: 'credit-card', color: '#6366F1', is_default: 1 },
+  { name: 'Room Rent', icon: 'home', color: '#E11D48', is_default: 1 },
   { name: 'Others', icon: 'grid', color: '#6B7280', is_default: 1 },
 ];
 
@@ -29,6 +32,13 @@ export function getNativeDb(): SQLite.SQLiteDatabase {
   }
   return nativeDb;
 }
+
+export const getCurrentMonthStr = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+};
 
 export function initDatabase() {
   if (isWeb) {
@@ -67,6 +77,28 @@ export function initDatabase() {
             modified = true;
           }
 
+          // Migration: Seed Petrol, EMI, and Room Rent if missing
+          const petrol = categories.find((c: any) => c.name.toLowerCase() === 'petrol');
+          if (!petrol) {
+            const nextId = categories.length > 0 ? Math.max(...categories.map((c: any) => c.id)) + 1 : 1;
+            categories.push({ id: nextId, name: 'Petrol', icon: 'droplet', color: '#0284C7', is_default: 1 });
+            modified = true;
+          }
+
+          const emi = categories.find((c: any) => c.name.toLowerCase() === 'emi');
+          if (!emi) {
+            const nextId = categories.length > 0 ? Math.max(...categories.map((c: any) => c.id)) + 1 : 1;
+            categories.push({ id: nextId, name: 'EMI', icon: 'credit-card', color: '#6366F1', is_default: 1 });
+            modified = true;
+          }
+
+          const roomRent = categories.find((c: any) => c.name.toLowerCase() === 'room rent');
+          if (!roomRent) {
+            const nextId = categories.length > 0 ? Math.max(...categories.map((c: any) => c.id)) + 1 : 1;
+            categories.push({ id: nextId, name: 'Room Rent', icon: 'home', color: '#E11D48', is_default: 1 });
+            modified = true;
+          }
+
           if (modified) {
             localStorage.setItem('expense_tracker_categories', JSON.stringify(categories));
           }
@@ -80,6 +112,26 @@ export function initDatabase() {
     }
     if (!localStorage.getItem('expense_tracker_budgets')) {
       localStorage.setItem('expense_tracker_budgets', JSON.stringify([]));
+    } else {
+      // Migration: Add month to existing web budgets if missing
+      try {
+        const budgetData = localStorage.getItem('expense_tracker_budgets');
+        if (budgetData) {
+          const budgets = JSON.parse(budgetData);
+          let modified = false;
+          budgets.forEach((b: any) => {
+            if (!b.month) {
+              b.month = getCurrentMonthStr();
+              modified = true;
+            }
+          });
+          if (modified) {
+            localStorage.setItem('expense_tracker_budgets', JSON.stringify(budgets));
+          }
+        }
+      } catch (e) {
+        console.error('Failed to run budgets migration in localStorage:', e);
+      }
     }
     console.log('Web localStorage database initialized.');
   } else {
@@ -114,14 +166,50 @@ export function initDatabase() {
         );
       `);
       
-      // Create Budgets Table
+      // Create Budgets Table with month support
       db.execSync(`
         CREATE TABLE IF NOT EXISTS budgets (
-          category_id INTEGER PRIMARY KEY,
+          category_id INTEGER,
+          month TEXT NOT NULL,
           limit_amount REAL NOT NULL,
+          PRIMARY KEY (category_id, month),
           FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
         );
       `);
+
+      // SQLite Migration: Check if budgets table has month column
+      let hasMonthColumn = false;
+      try {
+        const columns = db.getAllSync<{ name: string }>('PRAGMA table_info(budgets);');
+        hasMonthColumn = columns.some(col => col.name === 'month');
+      } catch (e) {
+        console.error('Failed to query budgets table info:', e);
+      }
+
+      if (!hasMonthColumn) {
+        console.log('Migrating SQLite budgets table to include month column...');
+        db.execSync('ALTER TABLE budgets RENAME TO budgets_old;');
+        db.execSync(`
+          CREATE TABLE budgets (
+            category_id INTEGER,
+            month TEXT NOT NULL,
+            limit_amount REAL NOT NULL,
+            PRIMARY KEY (category_id, month),
+            FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
+          );
+        `);
+        const currentMonth = getCurrentMonthStr();
+        try {
+          db.runSync(
+            'INSERT INTO budgets (category_id, month, limit_amount) SELECT category_id, ?, limit_amount FROM budgets_old;',
+            [currentMonth]
+          );
+        } catch (e) {
+          console.error('Failed to migrate data from budgets_old:', e);
+        }
+        db.execSync('DROP TABLE IF EXISTS budgets_old;');
+        console.log('SQLite budgets table migration completed.');
+      }
 
       // Create Settings Table
       db.execSync(`
@@ -165,6 +253,29 @@ export function initDatabase() {
             db.runSync(
               'INSERT INTO categories (name, icon, color, is_default) VALUES (?, ?, ?, 1);',
               ['Savings', 'trending-up', '#14B8A6']
+            );
+          }
+
+          // Seeding Petrol, EMI, and Room Rent
+          const petrolRow = db.getFirstSync<{ id: number }>('SELECT id FROM categories WHERE LOWER(name) = ?;', ['petrol']);
+          if (!petrolRow) {
+            db.runSync(
+              'INSERT INTO categories (name, icon, color, is_default) VALUES (?, ?, ?, 1);',
+              ['Petrol', 'droplet', '#0284C7']
+            );
+          }
+          const emiRow = db.getFirstSync<{ id: number }>('SELECT id FROM categories WHERE LOWER(name) = ?;', ['emi']);
+          if (!emiRow) {
+            db.runSync(
+              'INSERT INTO categories (name, icon, color, is_default) VALUES (?, ?, ?, 1);',
+              ['EMI', 'credit-card', '#6366F1']
+            );
+          }
+          const roomRentRow = db.getFirstSync<{ id: number }>('SELECT id FROM categories WHERE LOWER(name) = ?;', ['room rent']);
+          if (!roomRentRow) {
+            db.runSync(
+              'INSERT INTO categories (name, icon, color, is_default) VALUES (?, ?, ?, 1);',
+              ['Room Rent', 'home', '#E11D48']
             );
           }
         } catch (e) {

@@ -31,6 +31,7 @@ export default function CategoryIcon({ name, color = '#ffffff', size = 20 }: Cat
     'umbrella',
     'award',
     'globe',
+    'droplet',
   ];
 
   let iconName: any = name;

@@ -6,17 +6,13 @@ import { Feather } from '@expo/vector-icons';
 import { getContrastColor, getTranslucentColor } from '../utils/color';
 
 export default function CategoryManager() {
-  const { categories, budgets, addNewCategory, deleteCat, updateBudget, removeBudget, theme, currencySymbol } = useApp();
+  const { categories, addNewCategory, deleteCat, theme } = useApp();
   const isDark = theme === 'dark';
 
   // Form States
   const [newCatName, setNewCatName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('grid');
   const [selectedColor, setSelectedColor] = useState('#8B5CF6');
-
-  // Budget States
-  const [editingBudgetId, setEditingBudgetId] = useState<number | null>(null);
-  const [budgetAmount, setBudgetAmount] = useState('');
 
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -93,22 +89,6 @@ export default function CategoryManager() {
         ]
       );
     }
-  };
-
-  const handleSaveBudget = (categoryId: number) => {
-    const amount = parseFloat(budgetAmount);
-    if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid positive budget amount.');
-      return;
-    }
-    updateBudget(categoryId, amount);
-    setEditingBudgetId(null);
-    setBudgetAmount('');
-  };
-
-  const handleRemoveBudget = (categoryId: number) => {
-    removeBudget(categoryId);
-    setEditingBudgetId(null);
   };
 
   return (
@@ -210,17 +190,14 @@ export default function CategoryManager() {
         </Pressable>
       </View>
 
-      {/* 2. Manage Categories List & Budgets */}
+      {/* 2. Manage Categories List */}
       <View style={[styles.card, isDark ? styles.cardDark : styles.cardLight]}>
         <Text style={[styles.cardTitle, isDark ? styles.textWhite : styles.textBlack]}>
-          Existing Categories & Budgets
+          Existing Categories
         </Text>
 
         <View style={styles.listContainer}>
           {categories.map((cat) => {
-            const isEditingBudget = editingBudgetId === cat.id;
-            const categoryBudget = budgets.find(b => b.category_id === cat.id);
-
             return (
               <View 
                 key={cat.id} 
@@ -235,38 +212,12 @@ export default function CategoryManager() {
                     <View style={[styles.iconBox, { backgroundColor: cat.color }]}>
                       <CategoryIcon name={cat.icon} size={14} color={getContrastColor(cat.color)} />
                     </View>
-                    <View>
-                      <Text style={[styles.catName, isDark ? styles.textWhite : styles.textBlack]}>
-                        {cat.name}
-                      </Text>
-                      {categoryBudget ? (
-                        <Text style={styles.budgetValueText}>
-                          Budget: {currencySymbol}{categoryBudget.limit_amount}/mo
-                        </Text>
-                      ) : (
-                        <Text style={[styles.noBudgetText, isDark ? styles.textMutedDark : styles.textMutedLight]}>
-                          No budget set
-                        </Text>
-                      )}
-                    </View>
+                    <Text style={[styles.catName, isDark ? styles.textWhite : styles.textBlack]}>
+                      {cat.name}
+                    </Text>
                   </View>
 
                   <View style={styles.itemActions}>
-                    {/* Set Budget Trigger */}
-                    <Pressable
-                      onPress={() => {
-                        if (isEditingBudget) {
-                          setEditingBudgetId(null);
-                        } else {
-                          setEditingBudgetId(cat.id);
-                          setBudgetAmount(categoryBudget ? categoryBudget.limit_amount.toString() : '');
-                        }
-                      }}
-                      style={[styles.actionBtn, isDark ? styles.actionBtnDark : styles.actionBtnLight]}
-                    >
-                      <Feather name="activity" size={13} color={categoryBudget ? '#8B5CF6' : (isDark ? '#94A3B8' : '#64748B')} />
-                    </Pressable>
-                    
                     {/* Delete button (only visible if not system categories) */}
                     {cat.is_default === 0 ? (
                       <Pressable
@@ -280,39 +231,6 @@ export default function CategoryManager() {
                     )}
                   </View>
                 </View>
-
-                {/* Inline Budget Editor Form */}
-                {isEditingBudget && (
-                  <View style={[styles.budgetEditor, isDark ? styles.editorDark : styles.editorLight]}>
-                    <Text style={[styles.editorLabel, isDark ? styles.textWhite : styles.textBlack]}>
-                      Monthly Limit ({currencySymbol})
-                    </Text>
-                    <View style={styles.editorInputRow}>
-                      <TextInput
-                        placeholder="0.00"
-                        placeholderTextColor={isDark ? '#475569' : '#94A3B8'}
-                        keyboardType="decimal-pad"
-                        style={[styles.budgetInput, isDark ? styles.budgetInputDark : styles.budgetInputLight]}
-                        value={budgetAmount}
-                        onChangeText={setBudgetAmount}
-                      />
-                      <Pressable
-                        onPress={() => handleSaveBudget(cat.id)}
-                        style={[styles.editorActionBtn, styles.saveBudgetBtn]}
-                      >
-                        <Feather name="check" size={14} color="#FFFFFF" />
-                      </Pressable>
-                      {categoryBudget && (
-                        <Pressable
-                          onPress={() => handleRemoveBudget(cat.id)}
-                          style={[styles.editorActionBtn, styles.deleteBudgetBtn]}
-                        >
-                          <Feather name="trash-2" size={14} color="#FFFFFF" />
-                        </Pressable>
-                      )}
-                    </View>
-                  </View>
-                )}
               </View>
             );
           })}
@@ -479,15 +397,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 2,
   },
-  budgetValueText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#8B5CF6',
-  },
-  noBudgetText: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
   itemActions: {
     flexDirection: 'row',
     gap: 8,
@@ -500,72 +409,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
   },
-  actionBtnDark: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  actionBtnLight: {
-    backgroundColor: '#F8FAFC',
-    borderColor: 'rgba(0, 0, 0, 0.05)',
-  },
   deleteActionBtn: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderColor: 'rgba(239, 68, 68, 0.15)',
   },
   actionBtnPlaceholder: {
     width: 30,
-  },
-  budgetEditor: {
-    marginTop: 10,
-    padding: 12,
-    borderRadius: 12,
-  },
-  editorDark: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-  },
-  editorLight: {
-    backgroundColor: '#F8FAFC',
-  },
-  editorLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  editorInputRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  budgetInput: {
-    flex: 1,
-    height: 38,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    fontSize: 13,
-    fontWeight: '600',
-    borderWidth: 1,
-  },
-  budgetInputDark: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    color: '#FFFFFF',
-  },
-  budgetInputLight: {
-    backgroundColor: '#FFFFFF',
-    borderColor: 'rgba(0, 0, 0, 0.08)',
-    color: '#0F172A',
-  },
-  editorActionBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveBudgetBtn: {
-    backgroundColor: '#8B5CF6',
-  },
-  deleteBudgetBtn: {
-    backgroundColor: '#EF4444',
   },
   pressed: {
     opacity: 0.8,

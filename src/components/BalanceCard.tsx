@@ -4,13 +4,18 @@ import { useApp } from '../context/AppContext';
 import { Feather } from '@expo/vector-icons';
 
 export default function BalanceCard() {
-  const { stats, currencySymbol, theme } = useApp();
+  const { stats, budgets, currencySymbol, theme } = useApp();
   const isDark = theme === 'dark';
   const { width } = useWindowDimensions();
 
   const burnRate = stats.totalIncome > 0 
     ? Math.min((stats.totalExpense / stats.totalIncome) * 100, 100) 
     : stats.totalExpense > 0 ? 100 : 0;
+
+  const totalBudget = budgets.reduce((sum, b) => sum + b.limit_amount, 0);
+  const totalSpent = stats.totalExpense;
+  const remainingBudget = totalBudget - totalSpent;
+  const budgetProgress = totalBudget > 0 ? Math.min((totalSpent / totalBudget) * 100, 100) : 0;
 
   // Formatting helpers
   const formatAmount = (num: number) => {
@@ -98,6 +103,58 @@ export default function BalanceCard() {
               }
             ]} />
           </View>
+        </View>
+      )}
+
+      {/* Monthly Budget Progress Section */}
+      {totalBudget > 0 && (
+        <View style={[
+          styles.budgetContainer,
+          isDark ? styles.borderDark : styles.borderLight,
+          { borderTopWidth: stats.totalIncome > 0 ? 0 : 1, marginTop: stats.totalIncome > 0 ? 12 : 20, paddingTop: stats.totalIncome > 0 ? 0 : 16 }
+        ]}>
+          <View style={styles.budgetHeader}>
+            <Text style={[styles.budgetLabel, isDark ? styles.textMutedDark : styles.textMutedLight]}>
+              Monthly Budget
+            </Text>
+            <Text style={[styles.budgetValue, isDark ? styles.textWhite : styles.textBlack]}>
+              {formatAmount(totalSpent)} / {formatAmount(totalBudget)}
+            </Text>
+          </View>
+          
+          <View style={[styles.progressBarBg, isDark ? styles.progressBgDark : styles.progressBgLight]}>
+            <View style={[
+              styles.progressBarFill, 
+              { 
+                width: `${budgetProgress}%`, 
+                backgroundColor: budgetProgress >= 100 ? '#EF4444' : budgetProgress > 80 ? '#F59E0B' : '#10B981' 
+              }
+            ]} />
+          </View>
+          <View style={styles.budgetFooter}>
+            {remainingBudget >= 0 ? (
+              <Text style={styles.budgetFooterLeft}>
+                {formatAmount(remainingBudget)} remaining
+              </Text>
+            ) : (
+              <Text style={[styles.budgetFooterLeft, styles.textRed]}>
+                Over budget by {formatAmount(Math.abs(remainingBudget))}
+              </Text>
+            )}
+            <Text style={[styles.budgetFooterRight, isDark ? styles.textMutedDark : styles.textMutedLight]}>
+              {budgetProgress.toFixed(0)}% spent
+            </Text>
+          </View>
+
+          {/* Exceeded Budget Warning Message */}
+          {totalSpent > totalBudget && (
+            <View style={styles.warningContainer}>
+              <Feather name="alert-triangle" size={12} color="#EF4444" />
+              <Text style={styles.warningText}>
+                Expenses exceed your monthly budget!
+              </Text>
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -216,6 +273,65 @@ const styles = StyleSheet.create({
   progressBarFill: {
     height: '100%',
     borderRadius: 3,
+  },
+  budgetContainer: {
+    paddingTop: 16,
+  },
+  borderDark: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  borderLight: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  budgetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+    alignItems: 'center',
+  },
+  budgetLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  budgetValue: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  budgetEmptyLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    fontStyle: 'italic',
+  },
+  budgetFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  budgetFooterLeft: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#10B981',
+  },
+  budgetFooterRight: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginTop: 10,
+    gap: 6,
+  },
+  warningText: {
+    color: '#EF4444',
+    fontSize: 11,
+    fontWeight: '700',
   },
   textWhite: {
     color: '#FFFFFF',

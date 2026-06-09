@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { StyleSheet, View, Text, SafeAreaView, Pressable, Platform, StatusBar, Alert, Image, FlatList, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, SafeAreaView, Pressable, Platform, StatusBar, Alert, Image, FlatList, ActivityIndicator, ScrollView } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { AppProvider, useApp } from './src/context/AppContext';
 import BalanceCard from './src/components/BalanceCard';
@@ -7,10 +7,12 @@ import TransactionList from './src/components/TransactionList';
 import AnalyticsCharts from './src/components/AnalyticsCharts';
 import CategoryManager from './src/components/CategoryManager';
 import AddTransactionModal from './src/components/AddTransactionModal';
+import BudgetManager from './src/components/BudgetManager';
 import { exportToExcel, importFromExcel } from './src/utils/excel';
 import { Feather } from '@expo/vector-icons';
+import packageJson from './package.json';
 
-type TabType = 'dashboard' | 'analytics' | 'categories' | 'settings';
+type TabType = 'dashboard' | 'budget' | 'analytics' | 'categories' | 'settings';
 
 function MainAppContent() {
   const { theme, toggleTheme, currencyCode, updateCurrency, resetAll, refreshData, transactions, selectedMonth, setSelectedMonth, isLoading } = useApp();
@@ -291,12 +293,18 @@ function MainAppContent() {
           </View>
         )}
 
+        {activeTab === 'budget' && <BudgetManager />}
+
         {activeTab === 'analytics' && <AnalyticsCharts />}
 
         {activeTab === 'categories' && <CategoryManager />}
 
         {activeTab === 'settings' && (
-          <View style={styles.screenInner}>
+          <ScrollView 
+            style={styles.screenInner}
+            contentContainerStyle={styles.settingsScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Currency settings card */}
             <View style={[styles.settingsCard, isDark ? styles.settingsCardDark : styles.settingsCardLight]}>
               <Text style={[styles.settingsTitle, isDark ? styles.textWhite : styles.textBlack]}>
@@ -429,7 +437,14 @@ function MainAppContent() {
                 <Text style={styles.resetBtnText}>Clear Database</Text>
               </Pressable>
             </View>
-          </View>
+
+            {/* App Version Info */}
+            <View style={styles.versionContainer}>
+              <Text style={[styles.versionText, isDark ? styles.textMutedDark : styles.textMutedLight]}>
+                Version {packageJson.version}
+              </Text>
+            </View>
+          </ScrollView>
         )}
       </View>
 
@@ -448,6 +463,21 @@ function MainAppContent() {
             styles.tabText,
             activeTab === 'dashboard' ? styles.tabTextActive : (isDark ? styles.textMutedDark : styles.textMutedLight)
           ]}>Dashboard</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => setActiveTab('budget')}
+          style={[styles.tabItem, activeTab === 'budget' && styles.tabItemActive]}
+        >
+          <Feather
+            name="sliders"
+            size={20}
+            color={activeTab === 'budget' ? '#8B5CF6' : (isDark ? '#64748B' : '#94A3B8')}
+          />
+          <Text style={[
+            styles.tabText,
+            activeTab === 'budget' ? styles.tabTextActive : (isDark ? styles.textMutedDark : styles.textMutedLight)
+          ]}>Budget</Text>
         </Pressable>
 
         <Pressable
@@ -847,5 +877,19 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  settingsScrollContent: {
+    paddingBottom: 32,
+  },
+  versionContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  versionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
 });

@@ -122,17 +122,19 @@ export function deleteCategory(id: number): boolean {
   }
 }
 
-// Fetch all budgets
-export function getAllBudgets(): Budget[] {
+// Fetch all budgets for a specific month
+export function getAllBudgets(month: string): Budget[] {
   if (isWeb) {
     const budgetData = localStorage.getItem('expense_tracker_budgets');
     const budgets: Budget[] = budgetData ? JSON.parse(budgetData) : [];
+    
+    const filtered = budgets.filter(b => b.month === month);
     
     const catData = localStorage.getItem('expense_tracker_categories');
     const categories: Category[] = catData ? JSON.parse(catData) : [];
     
     // Hydrate budgets
-    return budgets.map(b => {
+    return filtered.map(b => {
       const cat = categories.find(c => c.id === b.category_id);
       return {
         ...b,
@@ -144,10 +146,11 @@ export function getAllBudgets(): Budget[] {
     try {
       const db = getNativeDb();
       return db.getAllSync<Budget>(`
-        SELECT b.category_id, b.limit_amount, c.name as category_name, c.color as category_color 
+        SELECT b.category_id, b.month, b.limit_amount, c.name as category_name, c.color as category_color 
         FROM budgets b 
-        JOIN categories c ON b.category_id = c.id;
-      `);
+        JOIN categories c ON b.category_id = c.id
+        WHERE b.month = ?;
+      `, [month]);
     } catch (error) {
       console.error('Failed to get budgets from SQLite:', error);
       return [];
@@ -155,8 +158,8 @@ export function getAllBudgets(): Budget[] {
   }
 }
 
-// Set or update a budget for a category
-export function setBudget(categoryId: number, limitAmount: number): Budget | null {
+// Set or update a budget for a category for a specific month
+export function setBudget(categoryId: number, limitAmount: number, month: string): Budget | null {
   if (limitAmount <= 0) return null;
 
   if (isWeb) {
@@ -169,18 +172,19 @@ export function setBudget(categoryId: number, limitAmount: number): Budget | nul
     
     if (!category) return null;
     
-    const existingIndex = budgets.findIndex(b => b.category_id === categoryId);
+    const existingIndex = budgets.findIndex(b => b.category_id === categoryId && b.month === month);
     const newBudget: Budget = {
       category_id: categoryId,
+      month: month,
       limit_amount: limitAmount,
       category_name: category.name,
       category_color: category.color,
     };
     
     if (existingIndex >= 0) {
-      budgets[existingIndex] = { category_id: categoryId, limit_amount: limitAmount };
+      budgets[existingIndex] = { category_id: categoryId, month: month, limit_amount: limitAmount };
     } else {
-      budgets.push({ category_id: categoryId, limit_amount: limitAmount });
+      budgets.push({ category_id: categoryId, month: month, limit_amount: limitAmount });
     }
     
     localStorage.setItem('expense_tracker_budgets', JSON.stringify(budgets));
@@ -193,12 +197,13 @@ export function setBudget(categoryId: number, limitAmount: number): Budget | nul
       if (!category) return null;
 
       db.runSync(
-        'INSERT OR REPLACE INTO budgets (category_id, limit_amount) VALUES (?, ?);',
-        [categoryId, limitAmount]
+        'INSERT OR REPLACE INTO budgets (category_id, month, limit_amount) VALUES (?, ?, ?);',
+        [categoryId, month, limitAmount]
       );
       
       return {
         category_id: categoryId,
+        month: month,
         limit_amount: limitAmount,
         category_name: category.name,
         category_color: category.color,
@@ -210,25 +215,75 @@ export function setBudget(categoryId: number, limitAmount: number): Budget | nul
   }
 }
 
-// Delete budget for a category
-export function deleteBudget(categoryId: number): boolean {
+// Delete budget for a category for a specific month
+export function deleteBudget(categoryId: number, month: string): boolean {
   if (isWeb) {
     const budgetData = localStorage.getItem('expense_tracker_budgets');
     if (!budgetData) return false;
     let budgets: Budget[] = JSON.parse(budgetData);
     
     const lengthBefore = budgets.length;
-    budgets = budgets.filter(b => b.category_id !== categoryId);
+    budgets = budgets.filter(b => !(b.category_id === categoryId && b.month === month));
     
     localStorage.setItem('expense_tracker_budgets', JSON.stringify(budgets));
     return budgets.length < lengthBefore;
   } else {
     try {
       const db = getNativeDb();
-      db.runSync('DELETE FROM budgets WHERE category_id = ?;', [categoryId]);
+      db.runSync('DELETE FROM budgets WHERE category_id = ? AND month = ?;', [categoryId, month]);
       return true;
     } catch (error) {
       console.error('Failed to delete budget from SQLite:', error);
+      return false;
+    }
+  }
+}
+
+// Copy all budgets from one month to another month
+export function copyBudgets(fromMonth: string, toMonth: string): boolean {
+  if (isWeb) {
+    const budgetData = localStorage.getItem('expense_tracker_budgets');
+    let budgets: Budget[] = budgetData ? JSON.parse(budgetData) : [];
+    
+    // Get budgets of fromMonth
+    const sourceBudgets = budgets.filter(b => b.month === fromMonth);
+    if (sourceBudgets.length === 0) return false;
+    
+    // Remove existing budgets of toMonth for categories we are copying
+    const sourceCategoryIds = new Set(sourceBudgets.map(b => b.category_id));
+    budgets = budgets.filter(b => !(b.month === toMonth && sourceCategoryIds.has(b.category_id)));
+    
+    // Add copied budgets
+    sourceBudgets.forEach(b => {
+      budgets.push({
+        category_id: b.category_id,
+        month: toMonth,
+        limit_amount: b.limit_amount
+      });
+    });
+    
+    localStorage.setItem('expense_tracker_budgets', JSON.stringify(budgets));
+    return true;
+  } else {
+    try {
+      const db = getNativeDb();
+      // First delete toMonth budgets for categories that exist in fromMonth to prevent primary key constraint errors
+      db.runSync(`
+        DELETE FROM budgets 
+        WHERE month = ? 
+          AND category_id IN (SELECT category_id FROM budgets WHERE month = ?);
+      `, [toMonth, fromMonth]);
+
+      // Copy fromMonth budgets into toMonth
+      db.runSync(`
+        INSERT INTO budgets (category_id, month, limit_amount)
+        SELECT category_id, ?, limit_amount FROM budgets WHERE month = ?;
+      `, [toMonth, fromMonth]);
+      
+      const changesResult = db.getFirstSync<{ changes: number }>('SELECT changes() as changes;');
+      return changesResult ? changesResult.changes > 0 : true;
+    } catch (error) {
+      console.error('Failed to copy budgets in SQLite:', error);
       return false;
     }
   }
