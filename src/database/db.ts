@@ -20,6 +20,8 @@ export const DEFAULT_CATEGORIES: Omit<Category, 'id'>[] = [
   { name: 'Petrol', icon: 'droplet', color: '#0284C7', is_default: 1 },
   { name: 'EMI', icon: 'credit-card', color: '#6366F1', is_default: 1 },
   { name: 'Room Rent', icon: 'home', color: '#E11D48', is_default: 1 },
+  { name: 'Mobile', icon: 'smartphone', color: '#D946EF', is_default: 1 },
+  { name: 'Wifi/Internet', icon: 'wifi', color: '#0EA5E9', is_default: 1 },
   { name: 'Others', icon: 'grid', color: '#6B7280', is_default: 1 },
 ];
 
@@ -96,6 +98,20 @@ export function initDatabase() {
           if (!roomRent) {
             const nextId = categories.length > 0 ? Math.max(...categories.map((c: any) => c.id)) + 1 : 1;
             categories.push({ id: nextId, name: 'Room Rent', icon: 'home', color: '#E11D48', is_default: 1 });
+            modified = true;
+          }
+
+          const mobile = categories.find((c: any) => c.name.toLowerCase() === 'mobile');
+          if (!mobile) {
+            const nextId = categories.length > 0 ? Math.max(...categories.map((c: any) => c.id)) + 1 : 1;
+            categories.push({ id: nextId, name: 'Mobile', icon: 'smartphone', color: '#D946EF', is_default: 1 });
+            modified = true;
+          }
+
+          const wifiInternet = categories.find((c: any) => c.name.toLowerCase() === 'wifi/internet');
+          if (!wifiInternet) {
+            const nextId = categories.length > 0 ? Math.max(...categories.map((c: any) => c.id)) + 1 : 1;
+            categories.push({ id: nextId, name: 'Wifi/Internet', icon: 'wifi', color: '#0EA5E9', is_default: 1 });
             modified = true;
           }
 
@@ -276,6 +292,22 @@ export function initDatabase() {
             db.runSync(
               'INSERT INTO categories (name, icon, color, is_default) VALUES (?, ?, ?, 1);',
               ['Room Rent', 'home', '#E11D48']
+            );
+          }
+
+          const mobileRow = db.getFirstSync<{ id: number }>('SELECT id FROM categories WHERE LOWER(name) = ?;', ['mobile']);
+          if (!mobileRow) {
+            db.runSync(
+              'INSERT INTO categories (name, icon, color, is_default) VALUES (?, ?, ?, 1);',
+              ['Mobile', 'smartphone', '#D946EF']
+            );
+          }
+
+          const wifiInternetRow = db.getFirstSync<{ id: number }>('SELECT id FROM categories WHERE LOWER(name) = ?;', ['wifi/internet']);
+          if (!wifiInternetRow) {
+            db.runSync(
+              'INSERT INTO categories (name, icon, color, is_default) VALUES (?, ?, ?, 1);',
+              ['Wifi/Internet', 'wifi', '#0EA5E9']
             );
           }
         } catch (e) {

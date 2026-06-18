@@ -21,7 +21,8 @@ export default function CategoryManager() {
     'coffee', 'truck', 'shopping-bag', 'film', 'zap', 'home', 
     'dollar-sign', 'grid', 'credit-card', 'gift', 'heart', 
     'book', 'activity', 'smile', 'briefcase', 'tool',
-    'trending-up', 'tag', 'umbrella', 'award', 'globe'
+    'trending-up', 'tag', 'umbrella', 'award', 'globe',
+    'smartphone', 'wifi', 'droplet'
   ];
 
   // Color Palette
