@@ -22,7 +22,7 @@ export default function CategoryManager() {
     'dollar-sign', 'grid', 'credit-card', 'gift', 'heart', 
     'book', 'activity', 'smile', 'briefcase', 'tool',
     'trending-up', 'tag', 'umbrella', 'award', 'globe',
-    'smartphone', 'wifi', 'droplet'
+    'smartphone', 'wifi', 'droplet', 'cpu'
   ];
 
   // Color Palette

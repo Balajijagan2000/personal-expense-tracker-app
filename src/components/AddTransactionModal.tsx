@@ -129,7 +129,7 @@ export default function AddTransactionModal({ visible, onClose }: AddTransaction
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.modalBg}
       >
         <View style={[styles.modalSheet, isDark ? styles.sheetDark : styles.sheetLight]}>

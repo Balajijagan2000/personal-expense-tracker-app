@@ -34,6 +34,7 @@ export default function CategoryIcon({ name, color = '#ffffff', size = 20 }: Cat
     'droplet',
     'smartphone',
     'wifi',
+    'cpu',
   ];
 
   let iconName: any = name;

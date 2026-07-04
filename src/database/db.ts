@@ -15,6 +15,9 @@ export const DEFAULT_CATEGORIES: Omit<Category, 'id'>[] = [
   { name: 'Utilities', icon: 'zap', color: '#06B6D4', is_default: 1 },
   { name: 'Housing', icon: 'home', color: '#EF4444', is_default: 1 },
   { name: 'Salary', icon: 'dollar-sign', color: '#10B981', is_default: 1 },
+  { name: 'Electricity Bill', icon: 'zap', color: '#EAB308', is_default: 1 },
+  { name: 'Investment', icon: 'trending-up', color: '#84CC16', is_default: 1 },
+  { name: 'Accessories/Gadgets', icon: 'cpu', color: '#F43F5E', is_default: 1 },
   { name: 'Snacks', icon: 'smile', color: '#F97316', is_default: 1 },
   { name: 'Savings', icon: 'trending-up', color: '#14B8A6', is_default: 1 },
   { name: 'Petrol', icon: 'droplet', color: '#0284C7', is_default: 1 },
@@ -112,6 +115,27 @@ export function initDatabase() {
           if (!wifiInternet) {
             const nextId = categories.length > 0 ? Math.max(...categories.map((c: any) => c.id)) + 1 : 1;
             categories.push({ id: nextId, name: 'Wifi/Internet', icon: 'wifi', color: '#0EA5E9', is_default: 1 });
+            modified = true;
+          }
+
+          const electricityBill = categories.find((c: any) => c.name.toLowerCase() === 'electricity bill');
+          if (!electricityBill) {
+            const nextId = categories.length > 0 ? Math.max(...categories.map((c: any) => c.id)) + 1 : 1;
+            categories.push({ id: nextId, name: 'Electricity Bill', icon: 'zap', color: '#EAB308', is_default: 1 });
+            modified = true;
+          }
+
+          const investment = categories.find((c: any) => c.name.toLowerCase() === 'investment');
+          if (!investment) {
+            const nextId = categories.length > 0 ? Math.max(...categories.map((c: any) => c.id)) + 1 : 1;
+            categories.push({ id: nextId, name: 'Investment', icon: 'trending-up', color: '#84CC16', is_default: 1 });
+            modified = true;
+          }
+
+          const accessories = categories.find((c: any) => c.name.toLowerCase() === 'accessories/gadgets');
+          if (!accessories) {
+            const nextId = categories.length > 0 ? Math.max(...categories.map((c: any) => c.id)) + 1 : 1;
+            categories.push({ id: nextId, name: 'Accessories/Gadgets', icon: 'cpu', color: '#F43F5E', is_default: 1 });
             modified = true;
           }
 
@@ -308,6 +332,30 @@ export function initDatabase() {
             db.runSync(
               'INSERT INTO categories (name, icon, color, is_default) VALUES (?, ?, ?, 1);',
               ['Wifi/Internet', 'wifi', '#0EA5E9']
+            );
+          }
+
+          const electricityRow = db.getFirstSync<{ id: number }>('SELECT id FROM categories WHERE LOWER(name) = ?;', ['electricity bill']);
+          if (!electricityRow) {
+            db.runSync(
+              'INSERT INTO categories (name, icon, color, is_default) VALUES (?, ?, ?, 1);',
+              ['Electricity Bill', 'zap', '#EAB308']
+            );
+          }
+
+          const investmentRow = db.getFirstSync<{ id: number }>('SELECT id FROM categories WHERE LOWER(name) = ?;', ['investment']);
+          if (!investmentRow) {
+            db.runSync(
+              'INSERT INTO categories (name, icon, color, is_default) VALUES (?, ?, ?, 1);',
+              ['Investment', 'trending-up', '#84CC16']
+            );
+          }
+
+          const accessoriesRow = db.getFirstSync<{ id: number }>('SELECT id FROM categories WHERE LOWER(name) = ?;', ['accessories/gadgets']);
+          if (!accessoriesRow) {
+            db.runSync(
+              'INSERT INTO categories (name, icon, color, is_default) VALUES (?, ?, ?, 1);',
+              ['Accessories/Gadgets', 'cpu', '#F43F5E']
             );
           }
         } catch (e) {
