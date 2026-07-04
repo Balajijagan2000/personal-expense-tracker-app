@@ -22,6 +22,7 @@ export const DEFAULT_CATEGORIES: Omit<Category, 'id'>[] = [
   { name: 'Savings', icon: 'trending-up', color: '#14B8A6', is_default: 1 },
   { name: 'Petrol', icon: 'droplet', color: '#0284C7', is_default: 1 },
   { name: 'EMI', icon: 'credit-card', color: '#6366F1', is_default: 1 },
+  { name: 'Credit Card', icon: 'credit-card', color: '#4F46E5', is_default: 1 },
   { name: 'Room Rent', icon: 'home', color: '#E11D48', is_default: 1 },
   { name: 'Mobile', icon: 'smartphone', color: '#D946EF', is_default: 1 },
   { name: 'Wifi/Internet', icon: 'wifi', color: '#0EA5E9', is_default: 1 },
@@ -136,6 +137,13 @@ export function initDatabase() {
           if (!accessories) {
             const nextId = categories.length > 0 ? Math.max(...categories.map((c: any) => c.id)) + 1 : 1;
             categories.push({ id: nextId, name: 'Accessories/Gadgets', icon: 'cpu', color: '#F43F5E', is_default: 1 });
+            modified = true;
+          }
+
+          const creditCard = categories.find((c: any) => c.name.toLowerCase() === 'credit card');
+          if (!creditCard) {
+            const nextId = categories.length > 0 ? Math.max(...categories.map((c: any) => c.id)) + 1 : 1;
+            categories.push({ id: nextId, name: 'Credit Card', icon: 'credit-card', color: '#4F46E5', is_default: 1 });
             modified = true;
           }
 
@@ -356,6 +364,14 @@ export function initDatabase() {
             db.runSync(
               'INSERT INTO categories (name, icon, color, is_default) VALUES (?, ?, ?, 1);',
               ['Accessories/Gadgets', 'cpu', '#F43F5E']
+            );
+          }
+
+          const creditCardRow = db.getFirstSync<{ id: number }>('SELECT id FROM categories WHERE LOWER(name) = ?;', ['credit card']);
+          if (!creditCardRow) {
+            db.runSync(
+              'INSERT INTO categories (name, icon, color, is_default) VALUES (?, ?, ?, 1);',
+              ['Credit Card', 'credit-card', '#4F46E5']
             );
           }
         } catch (e) {
